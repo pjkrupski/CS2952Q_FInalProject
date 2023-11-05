@@ -2,6 +2,7 @@ import torch
 from tqdm import tqdm
 import typer
 from typing import Optional
+import torch.nn as nn
 
 from models import CNNModel
 from preprocess import load_data
@@ -23,12 +24,13 @@ def train(args, model, device, train_loader, optimizer, loss_fn):
     model.train()
 
     for _ in range(args['epochs']):
-        for b in tqdm(train_loader):
-            b = b.to(device)
+        for data, target in tqdm(train_loader):
+            data, target = data.to(device), target.to(device)
+            print(data)
             optimizer.zero_grad()
 
-            out = model(b)
-            loss = loss_fn(out)
+            out = model(data)
+            loss = loss_fn(out, target)
             loss.backward()
             optimizer.step()
 
@@ -55,7 +57,7 @@ def main(
 
     model = CNNModel().to(device)
    
-    loss_fn = None
+    loss_fn = nn.CrossEntropyLoss()
     acc_fn = None
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
@@ -65,7 +67,7 @@ def main(
     if save_model:
         torch.save(model.state_dict(), output_file)
 
-    test(model, device, test_loader, loss_fn, acc_fn, verbose=True)
+    # test(model, device, test_loader, loss_fn, acc_fn, verbose=True)
 
 if __name__ == '__main__':
     typer.run(main)
