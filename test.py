@@ -1,34 +1,32 @@
 import torch
 import typer
 from typing import Optional
+import torch.nn as nn
 
 from models import CNNModel
 from preprocess import load_data
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
-def test(experiment, model, device, test_loader, loss_fn, acc_fn, verbose=False):
+def test(model, device, test_loader, loss_fn, acc_fn):
     model.eval()
-    with experiment.test():
-      test_loss = 0
-      correct = 0
-      test_acc = 0
-      with torch.no_grad():
-          for b in test_loader:
-              b = b.to(device)
-              out = model(b)
-              test_loss += torch.sum(loss_fn(out)).item()
-              correct += torch.sum(acc_fn(out)).item()
+    test_loss = 0
+    correct = 0
+    test_acc = 0
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            out = model(data)
+            test_loss += torch.sum(loss_fn(out, target)).item()
+            correct += torch.sum(acc_fn(out, target)).item()
+            print(correct)
 
-      test_loss /= len(test_loader.dataset)
-      test_acc = correct / len(test_loader.dataset)
-      if verbose:
-          print('\nTest set: Average loss: {:.4f}, accuracy: {}/{} ({:.0f}%)\n'.format(
-              test_loss, correct, len(test_loader.dataset),
-              100. * correct / len(test_loader.dataset)))
-      experiment.log_metric('Test Loss', test_loss)
-      experiment.log_metric('Test Accuracy', test_acc)
-      return test_loss, test_acc
+    test_loss /= len(test_loader.dataset)
+    test_acc = correct / len(test_loader.dataset)
+    print('\nTest set: Average loss: {:.4f}, accuracy: {}/{} ({:.0f}%)\n'.format(
+        test_loss, correct, len(test_loader.dataset),
+        100. * correct / len(test_loader.dataset)))
+    return test_loss, test_acc
 
 def main(
     batch_size: Optional[int] = typer.Option(64, help='Input batch size for training (default: 64).'), 
@@ -39,10 +37,10 @@ def main(
     model = CNNModel().to(device)
     model.load_state_dict(torch.load(model_file))
 
-    loss_fn = None
-    acc_fn = None
+    loss_fn = nn.CrossEntropyLoss()
+    acc_fn = lambda out, target: nn.functional.one_hot(torch.argmax(out, dim=1), 10) * target
 
-    test(model, device, test_loader, loss_fn, acc_fn, verbose=True)
+    test(model, device, test_loader, loss_fn, acc_fn)
 
 if __name__ == '__main__':
     typer.run(main)

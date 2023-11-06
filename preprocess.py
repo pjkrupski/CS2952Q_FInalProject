@@ -16,13 +16,14 @@ def load_labels(filepath):
     headers = next(reader)
     for row in reader:
       image_names.append(row[0])
-      onehot = list(map(lambda x: int(x), row[1:]))
-      labels.append(torch.IntTensor(onehot))
+      onehot = list(map(lambda x: float(x), row[1:]))
+      labels.append(torch.FloatTensor(onehot))
   
   return image_names, labels
 
 def load_data(batch_size=16):
-  transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
+  # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
+  transform = transforms.Compose([transforms.ToTensor()])
   train_data = UATD_Dataset('./data/train', './data/train/_classes.csv', transform)
   test_data = UATD_Dataset('./data/test', './data/test/_classes.csv', transform)
   train_loader = DataLoader(train_data, batch_size, shuffle=True)
