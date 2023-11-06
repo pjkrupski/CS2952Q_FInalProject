@@ -4,8 +4,8 @@ import typer
 from typing import Optional
 import torch.nn as nn
 
-from models import CNNModel
-from preprocess import load_data
+from models import CNNModel_128, CNNModel_640
+from preprocess import load_single_data, load_multi_data
 from test import test
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
@@ -61,9 +61,9 @@ def main(
     }
     torch.manual_seed(seed)
 
-    train_loader, test_loader = load_data(batch_size)
+    train_loader, test_loader = load_single_data(batch_size)
 
-    model = CNNModel().to(device)
+    model = CNNModel_128().to(device)
    
     loss_fn = nn.CrossEntropyLoss()
     acc_fn = lambda out, target: nn.functional.one_hot(torch.argmax(out, dim=1), 10) * target

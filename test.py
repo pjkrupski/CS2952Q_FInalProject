@@ -3,8 +3,8 @@ import typer
 from typing import Optional
 import torch.nn as nn
 
-from models import CNNModel
-from preprocess import load_data
+from models import CNNModel_128, CNNModel_640
+from preprocess import load_single_data, load_multi_data
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
@@ -19,7 +19,6 @@ def test(model, device, test_loader, loss_fn, acc_fn):
             out = model(data)
             test_loss += torch.sum(loss_fn(out, target)).item()
             correct += torch.sum(acc_fn(out, target)).item()
-            print(correct)
 
     test_loss /= len(test_loader.dataset)
     test_acc = correct / len(test_loader.dataset)
@@ -32,9 +31,9 @@ def main(
     batch_size: Optional[int] = typer.Option(64, help='Input batch size for training (default: 64).'), 
     model_file: Optional[str] = typer.Option('model.pt', help='Path to model file to load for testing.')):
 
-    _, test_loader = load_data(batch_size)
+    _, test_loader = load_single_data(batch_size)
 
-    model = CNNModel().to(device)
+    model = CNNModel_128().to(device)
     model.load_state_dict(torch.load(model_file))
 
     loss_fn = nn.CrossEntropyLoss()
