@@ -47,6 +47,7 @@ class UATD_Multi_Dataset(Dataset):
     return image, label
 
 def load_single_data(batch_size=16):
+  # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(0, 1)])
   transform = transforms.Compose([transforms.ToTensor()])
   train_data = UATD_Single_Dataset('./data/train', './data/train/_annotations.csv', transform)
   test_data = UATD_Single_Dataset('./data/test', './data/test/_annotations.csv', transform)
@@ -54,6 +55,7 @@ def load_single_data(batch_size=16):
   test_loader = DataLoader(test_data, batch_size, shuffle=True)
   return train_loader, test_loader
 
+# Returns balanced data set with format[{image_file, label, bbox}...]
 def load_single_labels(filepath):
   classes = {
     'ball': 0,
@@ -68,8 +70,19 @@ def load_single_labels(filepath):
     'tyre': 9
   }
 
-  image_names = []
-  labels = []
+  splits = {
+    'ball': [],
+    'circle cage': [],
+    'cube': [],
+    'cylinder': [],
+    'human body': [],
+    'metal bucket': [],
+    'plane': [],
+    'rov': [],
+    'square cage': [],
+    'tyre': [] 
+  }
+
   bbox = []
   with open(filepath, newline='') as csvfile:
     reader = csv.reader(csvfile, delimiter=',', quotechar='|')
@@ -77,13 +90,22 @@ def load_single_labels(filepath):
     for row in reader:
       if len(row) == 0:
         continue
-      image_names.append(row[0])
+      image_name = row[0]
       onehot = torch.nn.functional.one_hot(torch.tensor(classes[row[3]], dtype=torch.int64), 10)
-      labels.append(onehot.type(torch.FloatTensor))
+      label = onehot.type(torch.FloatTensor)
       bounds = list(map(lambda x: int(x), row[4:8]))
-      bbox.append(torch.IntTensor(bounds))
+      bbox = torch.IntTensor(bounds)
+
+      splits[row[3]].append((image_name, label, bbox))
   
-  return image_names, labels, bbox
+  # Ensure number of examples per type is the same.
+  entries = []
+  min_count = min(list(map(lambda s: len(splits[s]), splits)))
+  for s in splits:
+    splits[s] = splits[s][:min_count]
+    entries.extend(splits[s])
+  print(len(entries))
+  return entries
 
 def load_single_image(filepath, bbox):
   image = Image.open(filepath)
@@ -108,15 +130,15 @@ def load_single_image(filepath, bbox):
 class UATD_Single_Dataset(Dataset):
   def __init__(self, image_dir, labels_file, transform=None):
     self.image_dir = image_dir
-    self.image_names, self.labels, self.bboxes = load_single_labels(labels_file)
+    self.entries = load_single_labels(labels_file)
     self.transform = transform
 
   def __len__(self):
-    return len(self.labels)
+    return len(self.entries)
 
   def __getitem__(self, idx):
-    label = self.labels[idx]
-    image = load_single_image(os.path.join(self.image_dir, self.image_names[idx]), self.bboxes[idx])
+    label = self.entries[idx][1]
+    image = load_single_image(os.path.join(self.image_dir, self.entries[idx][0]), self.entries[idx][2])
     if self.transform:
       image = self.transform(image)
     return image, label
