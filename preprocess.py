@@ -47,8 +47,8 @@ class UATD_Multi_Dataset(Dataset):
     return image, label
 
 def load_single_data(batch_size=16):
-  # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(0, 1)])
-  transform = transforms.Compose([transforms.ToTensor()])
+  transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(0, 1)])
+  # transform = transforms.Compose([transforms.ToTensor()])
   train_data = UATD_Single_Dataset('./data/train', './data/train/_annotations.csv', transform)
   test_data = UATD_Single_Dataset('./data/test', './data/test/_annotations.csv', transform)
   train_loader = DataLoader(train_data, batch_size, shuffle=True)
@@ -104,7 +104,6 @@ def load_single_labels(filepath):
   for s in splits:
     splits[s] = splits[s][:min_count]
     entries.extend(splits[s])
-  print(len(entries))
   return entries
 
 def load_single_image(filepath, bbox):

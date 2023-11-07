@@ -30,16 +30,18 @@ class CNNModel_128(nn.Module):
         super().__init__()
 
         self.model = nn.Sequential(
-          nn.Conv2d(1, 30, 8, 2), # in_channels, out_channels, kernel_size, stride
-          nn.ReLU(),
-          nn.Conv2d(30, 30, 6, 2),
-          nn.ReLU(),
-          nn.Conv2d(30, 30, 3, 1),
+          nn.Conv2d(1, 40, 8, 2), # in_channels, out_channels, kernel_size, stride
           nn.ReLU(),
           nn.MaxPool2d(2),
+          nn.Conv2d(40, 80, 6, 2),
+          nn.ReLU(),
+          nn.MaxPool2d(2),
+          nn.Conv2d(80, 160, 3, 1),
+          nn.ReLU(),
+          # nn.MaxPool2d(2),
           nn.Dropout(0.5),
           nn.Flatten(),
-          nn.Linear(5070, 128), #in_features, out_features
+          nn.Linear(2560, 128), #in_features, out_features
           nn.ReLU(),
           # nn.Dropout(0.1),
           nn.Linear(128, 10),
