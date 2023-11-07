@@ -45,7 +45,7 @@ def train(args, model, device, train_loader, optimizer, loss_fn, acc_fn):
 def main(
     batch_size: Optional[int] = typer.Option(16, help='Input batch size for training (default: 64).'), 
     epochs: Optional[int] = typer.Option(10, help='Number of epochs to train (default: 10).'), 
-    lr: Optional[float] = typer.Option(2e-5, help='Learning rate (default: 0.1).'), 
+    lr: Optional[float] = typer.Option(2e-4, help='Learning rate (default: 0.1).'), 
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
     save_model: Optional[bool] = typer.Option(True, help='For saving the current model.'),
@@ -68,7 +68,7 @@ def main(
     loss_fn = nn.CrossEntropyLoss()
     acc_fn = lambda out, target: nn.functional.one_hot(torch.argmax(out, dim=1), 10) * target
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     train(args, model, device, train_loader, optimizer, loss_fn, acc_fn)
 

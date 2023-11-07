@@ -109,7 +109,8 @@ def load_single_labels(filepath):
 def load_single_image(filepath, bbox):
   image = Image.open(filepath)
   image = image.convert('L')
-  center = (int(bbox[2]-bbox[0])/2, int(bbox[3] - bbox[1])/2) # x, y
+  # image.show()
+  center = (int(bbox[2] + bbox[0])/2, int(bbox[3] + bbox[1])/2) # x, y
 
   # Bounds adjustments
   left = center[0] - 64
@@ -123,7 +124,9 @@ def load_single_image(filepath, bbox):
     top = 0
   elif top + 128 > 639:
     top = 639 - 128
+
   image = image.crop((left, top, left + 128, top + 128)) # left, top, right, bottom
+  # image.show()
   return image
 
 class UATD_Single_Dataset(Dataset):
@@ -141,3 +144,12 @@ class UATD_Single_Dataset(Dataset):
     if self.transform:
       image = self.transform(image)
     return image, label
+
+def test():
+    entries = load_single_labels('./data/train/_annotations.csv')
+    for e in entries:
+      filepath = os.path.join('./data/train', e[0])
+      image = load_single_image(filepath, e[2])
+
+if __name__ == "__main__":
+   test()
