@@ -47,8 +47,8 @@ class UATD_Multi_Dataset(Dataset):
     return image, label
 
 def load_single_data(batch_size=16):
-  transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(0, 1)])
-  # transform = transforms.Compose([transforms.ToTensor()])
+  # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(0, 1)])
+  transform = transforms.Compose([transforms.ToTensor()])
   train_data = UATD_Single_Dataset('./data/train', './data/train/_annotations.csv', transform)
   test_data = UATD_Single_Dataset('./data/test', './data/test/_annotations.csv', transform)
   train_loader = DataLoader(train_data, batch_size, shuffle=True)
@@ -56,7 +56,7 @@ def load_single_data(batch_size=16):
   return train_loader, test_loader
 
 # Returns balanced data set with format[{image_file, label, bbox}...]
-def load_single_labels(filepath):
+def load_single_labels(filepath, is_test=False):
   classes = {
     'ball': 0,
     'circle cage': 1,
@@ -98,11 +98,12 @@ def load_single_labels(filepath):
 
       splits[row[3]].append((image_name, label, bbox))
   
-  # Ensure number of examples per type is the same.
+  # Ensure number of examples per type is the same unless testing.
   entries = []
   min_count = min(list(map(lambda s: len(splits[s]), splits)))
   for s in splits:
-    splits[s] = splits[s][:min_count]
+    if is_test:
+      splits[s] = splits[s][:min_count]
     entries.extend(splits[s])
   return entries
 
