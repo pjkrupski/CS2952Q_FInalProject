@@ -9,17 +9,19 @@ import torch.nn.functional as F
 from torchvision import io
 import torch.optim as optim
 from torchvision import datasets, transforms
+from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 
 from absl import flags
 
 from cleverhans.torch.attacks.fast_gradient_method import fast_gradient_method
+from cleverhans.torch.attacks.projected_gradient_descent import projected_gradient_descent
 
 from models import CNNModel_128
 from preprocess import load_single_data, load_single_labels, load_single_image
 
-pretrained_model = "model.pt"
+pretrained_model = "128b_120e.pt"
 use_cuda=True
 # Set random seed for reproducibility
 torch.manual_seed(42)
@@ -46,16 +48,31 @@ def fgsm_attack(image, epsilon, data_grad):
 # Doc https://abseil.io/docs/python/guides/flags
 FLAGS = flags.FLAGS
 
-train_loader, test_loader = load_single_data(64)
+train_loader, test_loader = load_single_data(4)
 for data, target in test_loader:
-    data, target = data.to(device), target.to(device)
-    #FLAGS.eps throws attribute error 
-    perturbed_image = fast_gradient_method(model, data, .3, np.inf)
-    print(io.decode_image(perturbed_image))
+    #data, target = data.to(device), target.to(device)
+    #squashed_data = torch.squeeze(data, dim=0)
+    #model(data)
+    #perturbed_image = projected_gradient_descent(model, data, .001, .001, 100, np.inf)
+    perturbed_image = fast_gradient_method(model, data, .001, np.inf)
+
+    to_pil = transforms.ToPILImage()
+    image = to_pil(perturbed_image[0])
+    image.show()
+    image.save("perturbed.jpg")
+    
     break 
 
 
        
-
+    """for d in data:
+        perturbed_image = fast_gradient_method(model, d, .3, np.inf)
+        to_pil = transforms.ToPILImage()
+        image = to_pil(d)
+        image.show()
+        image.save("perturbed.jpg")
+        #print(perturbed_image)
+        break
+    """
 
 
