@@ -49,7 +49,7 @@ def fgsm_attack(image, epsilon, data_grad):
 FLAGS = flags.FLAGS
 
 train_loader, test_loader = load_single_data(4)
-for data, target in test_loader:
+for data, target, filename in test_loader:
     #data, target = data.to(device), target.to(device)
     #squashed_data = torch.squeeze(data, dim=0)
     #model(data)
@@ -59,7 +59,7 @@ for data, target in test_loader:
     to_pil = transforms.ToPILImage()
     image = to_pil(perturbed_image[0])
     image.show()
-    image.save("perturbed.jpg")
+    image.save(f"{filename}.jpg")
     
     break 
 

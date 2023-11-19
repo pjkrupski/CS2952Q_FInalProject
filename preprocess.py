@@ -140,12 +140,12 @@ class UATD_Single_Dataset(Dataset):
     return len(self.entries)
 
   def __getitem__(self, idx):
+    filename = self.entries[idx][0]
     label = self.entries[idx][1]
-    image = load_single_image(os.path.join(self.image_dir, self.entries[idx][0]), self.entries[idx][2])
+    image = load_single_image(os.path.join(self.image_dir, filename), self.entries[idx][2])
     if self.transform:
       image = self.transform(image)
-    return image, label
-
+    return image, label, filename
 def test():
     entries = load_single_labels('./data/train/_annotations.csv')
     for e in entries:
