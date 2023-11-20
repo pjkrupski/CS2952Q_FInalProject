@@ -14,7 +14,7 @@ def test(model, device, test_loader, loss_fn, acc_fn):
     correct = 0
     test_acc = 0
     with torch.no_grad():
-        for data, target in test_loader:
+        for data, target, filename in test_loader:
             data, target = data.to(device), target.to(device)
             out = model(data)
             test_loss += torch.sum(loss_fn(out, target)).item()

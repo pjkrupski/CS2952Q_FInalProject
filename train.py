@@ -26,7 +26,7 @@ def train(args, model, device, train_loader, optimizer, loss_fn, acc_fn):
     for _ in range(args['epochs']):
         train_loss = 0
         correct = 0
-        for data, target in tqdm(train_loader):
+        for data, target, filename in tqdm(train_loader):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
 
