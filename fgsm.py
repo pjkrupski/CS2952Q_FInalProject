@@ -79,7 +79,7 @@ def main():
   # gen_examples(model, device, test_loader, 0.001)
   accs = iterative_attack(model, device, test_loader)
   file = open('./attack_results.txt', 'w')
-  file.write(accs)
+  file.write(str(accs))
   file.close()
 
 if __name__ == '__main__':

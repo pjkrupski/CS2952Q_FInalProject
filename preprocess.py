@@ -50,7 +50,7 @@ def load_single_data(batch_size=16):
     # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(0, 1)])
     transform = transforms.Compose([transforms.ToTensor()])
     train_data = UATD_Single_Dataset('./data/train', './data/train/_annotations.csv', transform)
-    test_data = UATD_Single_Dataset('./data/test', './data/test/_annotations.csv', transform)
+    test_data = UATD_Single_Dataset('./data/test', './data/test/_annotations.csv', transform, is_test=True)
     train_loader = DataLoader(train_data, batch_size, shuffle=True)
     test_loader = DataLoader(test_data, batch_size, shuffle=True)
     return train_loader, test_loader
@@ -131,9 +131,9 @@ def load_single_image(filepath, bbox):
     return image
 
 class UATD_Single_Dataset(Dataset):
-  def __init__(self, image_dir, labels_file, transform=None):
+  def __init__(self, image_dir, labels_file, transform=None, is_test=False):
     self.image_dir = image_dir
-    self.entries = load_single_labels(labels_file)
+    self.entries = load_single_labels(labels_file, is_test)
     self.transform = transform
 
   def __len__(self):
