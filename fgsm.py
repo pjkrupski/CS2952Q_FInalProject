@@ -12,6 +12,7 @@ from torchvision import datasets, transforms
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from absl import flags
 
@@ -21,58 +22,65 @@ from cleverhans.torch.attacks.projected_gradient_descent import projected_gradie
 from models import CNNModel_128
 from preprocess import load_single_data, load_single_labels, load_single_image
 
-pretrained_model = "128b_120e.pt"
-use_cuda=True
-# Set random seed for reproducibility
-torch.manual_seed(42)
 
-device = 'cuda' if torch.cuda.is_available() else "cpu"
-model = CNNModel_128().to(device)
-model.load_state_dict(torch.load(pretrained_model, map_location=device))
-model.eval()
+def iterative_attack(model, device, loader):
+    # Attack the model up to epsilon = 0.5, theoretical max.
+    accs = []
+    for i in tqdm(range(0, 51)):
+        eps = i / 100.0
+        acc = attack_test_pgd(model, device, loader, eps)
+        accs.append((eps, acc))
+    return accs
 
-#No epsilon will exceed 1
+def attack_test_pgd(model, device, test_loader, eps):
+    correct = 0
+    total = 0
+    for data, target, filenames in tqdm(test_loader):
+        data, target = data.to(device), target.to(device)
+        data_perturbed = projected_gradient_descent(model, data, eps, 0.01, 100, np.inf)
+        _, pred = model(data_perturbed).max(1)
+        correct += pred.eq(torch.argmax(target, dim=1)).sum().item()
+        total += pred.size(0)
+    return correct / total
 
-# FGSM attack code
-def fgsm_attack(image, epsilon, data_grad):
-    # Collect the element-wise sign of the data gradient
-    sign_data_grad = data_grad.sign()
-    # Create the perturbed image by adjusting each pixel of the input image
-    perturbed_image = image + epsilon*sign_data_grad
-    # Adding clipping to maintain [0,1] range
-    perturbed_image = torch.clamp(perturbed_image, 0, 1)
-    # Return the perturbed image
-    return perturbed_image
-
-
-# Doc https://abseil.io/docs/python/guides/flags
-FLAGS = flags.FLAGS
-
-train_loader, test_loader = load_single_data(4)
-for data, target, filename in test_loader:
-    #data, target = data.to(device), target.to(device)
-    #squashed_data = torch.squeeze(data, dim=0)
-    #model(data)
-    #perturbed_image = projected_gradient_descent(model, data, .001, .001, 100, np.inf)
-    perturbed_image = fast_gradient_method(model, data, .001, np.inf)
-
+def attack_test_fgsm(model, device, test_loader, eps):
+    correct = 0
+    total = 0
+    for data, target, filenames in tqdm(test_loader):
+        data, target = data.to(device), target.to(device)
+        data_perturbed = fast_gradient_method(model, data, eps, np.inf)
+        _, pred = model(data_perturbed).max(1)
+        correct += pred.eq(torch.argmax(target, dim=1)).sum().item()
+        total += pred.size(0)
+    return correct / total
+  
+def gen_examples(model, device, test_loader, eps):
+  for data, target, filenames in test_loader:
+    data, target = data.to(device), target.to(device)
+    data_perturbed = fast_gradient_method(model, data, eps, np.inf)
     to_pil = transforms.ToPILImage()
-    image = to_pil(perturbed_image[0])
+    image = to_pil(data_perturbed[0])
     image.show()
-    image.save(f"{filename}.jpg")
-    
-    break 
+    image.save(f"{filenames[0]}.jpg")
 
+def main():
+  pretrained_model = "128b_120e.pt"
 
-       
-    """for d in data:
-        perturbed_image = fast_gradient_method(model, d, .3, np.inf)
-        to_pil = transforms.ToPILImage()
-        image = to_pil(d)
-        image.show()
-        image.save("perturbed.jpg")
-        #print(perturbed_image)
-        break
-    """
+  # Set random seed for reproducibility
+  torch.manual_seed(42)
 
+  device = 'cuda' if torch.cuda.is_available() else "cpu"
+  model = CNNModel_128().to(device)
+  model.load_state_dict(torch.load(pretrained_model, map_location=device))
+  model.eval()
 
+  _, test_loader = load_single_data(4)
+
+  # gen_examples(model, device, test_loader, 0.001)
+  accs = iterative_attack(model, device, test_loader)
+  file = open('./attack_results.txt', 'w')
+  file.write(accs)
+  file.close()
+
+if __name__ == '__main__':
+  main()
