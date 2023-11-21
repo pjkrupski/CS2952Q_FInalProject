@@ -4,14 +4,14 @@ import typer
 from typing import Optional
 import torch.nn as nn
 
-from models import CNNModel_128, CNNModel_640
+from models import CNNModel_128, CNNModel_640, VitModel
 from preprocess import load_single_data, load_multi_data
 from test import test
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
 # Train/test code courtesy of pytorch examples repo. (https://github.com/pytorch/examples/blob/main/mnist/main.py#L12)
-def train(args, model, device, train_loader, optimizer, loss_fn, acc_fn):
+def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, acc_fn):
     """
     :param args command line arguments
     :param model model to be trained
@@ -42,6 +42,9 @@ def train(args, model, device, train_loader, optimizer, loss_fn, acc_fn):
             train_loss, correct, len(train_loader.dataset),
             100. * correct / len(train_loader.dataset)))
 
+        test(model, device, test_loader, loss_fn, acc_fn)
+        model.train()
+
 def main(
     batch_size: Optional[int] = typer.Option(16, help='Input batch size for training (default: 64).'), 
     epochs: Optional[int] = typer.Option(10, help='Number of epochs to train (default: 15).'), 
@@ -63,14 +66,15 @@ def main(
 
     train_loader, test_loader = load_single_data(batch_size)
 
-    model = CNNModel_128().to(device)
+    # model = CNNModel_128().to(device)
+    model = VitModel.to(device)
    
     loss_fn = nn.CrossEntropyLoss()
     acc_fn = lambda out, target: nn.functional.one_hot(torch.argmax(out, dim=1), 10) * target
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-    train(args, model, device, train_loader, optimizer, loss_fn, acc_fn)
+    train(args, model, device, train_loader, test_loader, optimizer, loss_fn, acc_fn)
 
     if save_model:
         torch.save(model.state_dict(), output_file)

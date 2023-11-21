@@ -100,10 +100,10 @@ def load_single_labels(filepath, is_test=False):
     
     # Ensure number of examples per type is the same unless testing.
     entries = []
-    min_count = min(list(map(lambda s: len(splits[s]), splits)))
+    # min_count = min(list(map(lambda s: len(splits[s]), splits)))
     for s in splits:
-        if not is_test:
-          splits[s] = splits[s][:min_count]
+        # if not is_test:
+        #   splits[s] = splits[s][:min_count]
         entries.extend(splits[s])
     return entries
 

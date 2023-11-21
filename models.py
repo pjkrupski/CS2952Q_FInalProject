@@ -1,5 +1,6 @@
 # Define all model architectures here.
 import torch.nn as nn
+from vit_pytorch import SimpleViT
 
 class CNNModel_640(nn.Module):
     def __init__(self):
@@ -52,3 +53,16 @@ class CNNModel_128(nn.Module):
 
     def forward(self, input):
       return self.model(input)
+
+VitModel = SimpleViT(
+   image_size=128,
+   patch_size = 16,
+   num_classes = 10,
+   dim=1024,
+   depth=6,
+   heads=16,
+   mlp_dim=2048,
+  #  dropout=0.1,
+  #  emb_dropout=0.1,
+   channels=1
+)
