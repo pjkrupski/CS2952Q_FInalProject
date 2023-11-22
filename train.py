@@ -23,7 +23,8 @@ def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, ac
     """
     model.train()
 
-    for _ in range(args['epochs']):
+    for e in range(args['epochs']):
+        print(f"Epoch {e}")
         train_loss = 0
         correct = 0
         for data, target, filename in tqdm(train_loader):
@@ -82,4 +83,7 @@ def main(
     test(model, device, test_loader, loss_fn, acc_fn)
 
 if __name__ == '__main__':
-    typer.run(main)
+    # typer.run(main)
+
+    train_loader, test_loader = load_single_data(16)
+    normalize_epsilon(test_loader)

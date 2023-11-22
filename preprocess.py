@@ -7,6 +7,18 @@ import torch
 import csv
 import numpy as np
 from PIL import Image
+from tqdm import tqdm
+
+def normalize_epsilon(data_loader):
+  maxes = []
+  for data, target, filename in tqdm(data_loader):
+      # Find max pixel intensities for each image in batch.
+      batch_maxes = torch.amax(data, dim=(1, 2, 3))
+      maxes.append(batch_maxes)
+  maxes = torch.concat(maxes)
+  mean = torch.mean(maxes).item()
+  print(mean/2)
+  return mean/2
 
 def load_multi_data(batch_size=16):
   transform = transforms.Compose([transforms.ToTensor()])
@@ -146,6 +158,7 @@ class UATD_Single_Dataset(Dataset):
     if self.transform:
       image = self.transform(image)
     return image, label, filename
+
 def test():
     entries = load_single_labels('./data/train/_annotations.csv')
     for e in entries:
@@ -153,4 +166,5 @@ def test():
       image = load_single_image(filepath, e[2])
 
 if __name__ == "__main__":
-   test()
+    train_loader, test_loader = load_single_data(16)
+    normalize_epsilon(test_loader)
