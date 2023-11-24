@@ -32,6 +32,9 @@ def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, ac
     #train loader len is 767
     #epochs is 10
     #7582 images in train folder 
+    
+    #Shuffle dataset
+    #torch.randperm(data_tensor.size(0))
     batches_to_perturb = set()
     num_images = len(train_loader) * args['batch_size']
     num_images_toperturb = num_images * (args['pjgd_training']/100)
@@ -43,10 +46,14 @@ def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, ac
         correct = 0
         i = 0
         for data, target, filename in tqdm(train_loader):
+            #Skip iteration if perturbation batch has been added in the prior loop
+            if "perturbed" in filename:
+                continue
             if i in batches_to_perturb:
                 print("Perturbing...")
                 perturbed_data = projected_gradient_descent(model, data, args['pjgd_eps'], 0.01, 100, np.inf)
-                torch.cat((data, perturbed_data), dim=0)
+                torch.cat(((perturbed_data, target, filename+"perturbed"), train_loader), dim=0)
+                perturbed_data = True
             #Data len is 16
             #Data[0] shape is [1, 128, 128]
             data, target = data.to(device), target.to(device)
