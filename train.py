@@ -50,7 +50,9 @@ def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, ac
             #Data[0] shape is [1, 128, 128]
             if i in batches_to_perturb:
                 total_batches_perturbed += 1
+                model.eval()
                 perturbed_data = projected_gradient_descent(model, data, args['pjgd_eps'], 0.01, 100, np.inf)
+                model.train()
                 #torch.cat((perturbed_data, data), dim=0)
                 #Perform Robust Training
                 perturbed_data, target = perturbed_data.to(device), target.to(device)
@@ -84,7 +86,7 @@ def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, ac
 def main(
     batch_size: Optional[int] = typer.Option(16, help='Input batch size for training (default: 64).'), 
     epochs: Optional[int] = typer.Option(10, help='Number of epochs to train (default: 15).'), 
-    lr: Optional[float] = typer.Option(2e-3, help='Learning rate (default: 0.1).'), 
+    lr: Optional[float] = typer.Option(2e-4, help='Learning rate (default: 0.1).'), 
     pjgd_training: Optional[int] = typer.Option(10, help='Percent of pjgd perturbed data eps included in training set'),
     pjgd_eps: Optional[int] = typer.Option(.01, help='Pjgd eps'),
     fgsm_training: Optional[int] = typer.Option(0, help='Percent of fgsm perturbed data included in training set'),
