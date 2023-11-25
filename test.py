@@ -31,6 +31,7 @@ def main(
     batch_size: Optional[int] = typer.Option(64, help='Input batch size for training (default: 64).'), 
     model_file: Optional[str] = typer.Option('model.pt', help='Path to model file to load for testing.')):
 
+    #128b_120e.pt
     _, test_loader = load_single_data(batch_size)
 
     model = CNNModel_128().to(device)

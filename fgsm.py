@@ -26,8 +26,10 @@ from preprocess import load_single_data, load_single_labels, load_single_image
 def iterative_attack(model, device, loader):
     # Attack the model up to epsilon = 0.5, theoretical max.
     accs = []
-    for i in tqdm(range(0, 51)):
-        eps = i / 100.0
+    #max eps is .18 
+    for i in tqdm(range(1, 57)):
+        i /= 3
+        eps = round(i / 100.0, 3)
         acc = attack_test_pgd(model, device, loader, eps)
         accs.append((eps, acc))
     return accs
@@ -60,8 +62,8 @@ def gen_examples(model, device, test_loader, eps):
     data_perturbed = fast_gradient_method(model, data, eps, np.inf)
     to_pil = transforms.ToPILImage()
     image = to_pil(data_perturbed[0])
-    image.show()
-    image.save(f"{filenames[0]}.jpg")
+    #image.show()
+    image.save(f"{filenames[0]}_perturbed.jpg")
 
 def main():
   pretrained_model = "128b_120e.pt"
