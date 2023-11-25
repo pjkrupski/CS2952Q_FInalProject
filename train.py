@@ -32,30 +32,36 @@ def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, ac
     #train loader len is 767
     #epochs is 10
     #7582 images in train folder 
-    
-    #Shuffle dataset
-    #torch.randperm(data_tensor.size(0))
-    batches_to_perturb = set()
-    num_images = len(train_loader) * args['batch_size']
+       
+    num_images = len(train_loader) * args['batch_size'] 
     num_images_toperturb = num_images * (args['pjgd_training']/100)
-    batches_to_perturb.update(random.sample(range(0, len(train_loader)), int(num_images_toperturb/args['batch_size']))) #range is end exclusive 
+    batches_perturbed_perEpoch = int(num_images_toperturb / args['batch_size'])
+    total_batches_perturbed = 0
 
     for e in range(args['epochs']):
         print(f"Epoch {e}")
         train_loss = 0
         correct = 0
+        batches_to_perturb = set()
+        batches_to_perturb.update(random.sample(range(0, len(train_loader)), batches_perturbed_perEpoch)) #range is end exclusive   
         i = 0
         for data, target, filename in tqdm(train_loader):
-            #Skip iteration if perturbation batch has been added in the prior loop
-            if "perturbed" in filename:
-                continue
-            if i in batches_to_perturb:
-                print("Perturbing...")
-                perturbed_data = projected_gradient_descent(model, data, args['pjgd_eps'], 0.01, 100, np.inf)
-                torch.cat(((perturbed_data, target, filename+"perturbed"), train_loader), dim=0)
-                perturbed_data = True
             #Data len is 16
             #Data[0] shape is [1, 128, 128]
+            if i in batches_to_perturb:
+                total_batches_perturbed += 1
+                perturbed_data = projected_gradient_descent(model, data, args['pjgd_eps'], 0.01, 100, np.inf)
+                #torch.cat((perturbed_data, data), dim=0)
+                #Perform Robust Training
+                perturbed_data, target = perturbed_data.to(device), target.to(device)
+                optimizer.zero_grad()
+                out = model(perturbed_data)
+                loss = loss_fn(out, target)
+                loss.backward()
+                train_loss += torch.sum(loss_fn(out, target)).item()
+                correct += torch.sum(acc_fn(out.cpu(), target.cpu())).item()
+                optimizer.step()
+            
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
 
