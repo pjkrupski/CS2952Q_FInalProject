@@ -87,14 +87,15 @@ def main(
     batch_size: Optional[int] = typer.Option(16, help='Input batch size for training (default: 64).'), 
     epochs: Optional[int] = typer.Option(10, help='Number of epochs to train (default: 15).'), 
     lr: Optional[float] = typer.Option(2e-4, help='Learning rate (default: 0.1).'), 
-    pjgd_training: Optional[int] = typer.Option(10, help='Percent of pjgd perturbed data eps included in training set'),
+    pjgd_training: Optional[int] = typer.Option(0, help='Percent of pjgd perturbed data eps included in training set'),
     pjgd_eps: Optional[int] = typer.Option(.01, help='Pjgd eps'),
     fgsm_training: Optional[int] = typer.Option(0, help='Percent of fgsm perturbed data included in training set'),
     fgsm_eps: Optional[int] = typer.Option(0, help='Fgsm eps'),
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
     save_model: Optional[bool] = typer.Option(True, help='For saving the current model.'),
-    output_file: Optional[str] = typer.Option('model.pt', help='The name of output file.')):
+    output_file: Optional[str] = typer.Option('model.pt', help='The name of output file.'),
+    model_name: Optional[str] = typer.Option('cnn', help='"cnn" for CNN model. "vit" for ViT model.')):
 
     args = {
         'batch_size': batch_size,
@@ -109,14 +110,14 @@ def main(
         'fgsm_eps': fgsm_eps
     }
     torch.manual_seed(seed)
-    print(batch_size, " batch size")
-    train_loader, test_loader = load_single_data(batch_size)
+    augment = True if model_name.lower() == "cnn" else False
+    train_loader, test_loader = load_single_data(batch_size, augment)
     
-    #Append perturbed data
-    
-
-    model = CNNModel_128().to(device)
-    #model = VitModel.to(device)
+    model = None
+    if model_name.lower() == "cnn":
+        model = CNNModel_128().to(device)
+    else:
+        model = VitModel.to(device)
    
     loss_fn = nn.CrossEntropyLoss()
     acc_fn = lambda out, target: nn.functional.one_hot(torch.argmax(out, dim=1), 10) * target

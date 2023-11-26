@@ -58,9 +58,13 @@ class UATD_Multi_Dataset(Dataset):
         image = self.transform(image)
       return image, label
 
-def load_single_data(batch_size=16):
-    # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(0, 1)])
-    transform = transforms.Compose([transforms.ToTensor()])
+def load_single_data(batch_size=16, augment = False):
+    transform = None
+    if augment:
+      transform = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.RandomAffine(0, translate=(0.1, 0.1), scale=(1, 1.1)), transforms.ToTensor()])
+    else:
+      transform = transforms.Compose([transforms.ToTensor()])
+
     train_data = UATD_Single_Dataset('./data/train', './data/train/_annotations.csv', transform)
     test_data = UATD_Single_Dataset('./data/test', './data/test/_annotations.csv', transform, is_test=True)
     train_loader = DataLoader(train_data, batch_size, shuffle=True)
@@ -139,7 +143,7 @@ def load_single_image(filepath, bbox):
         top = 639 - 128
 
     image = image.crop((left, top, left + 128, top + 128)) # left, top, right, bottom
-    #image.show()
+    # image.show()
     return image
 
 class UATD_Single_Dataset(Dataset):
@@ -159,12 +163,20 @@ class UATD_Single_Dataset(Dataset):
       image = self.transform(image)
     return image, label, filename
 
-def test():
-    entries = load_single_labels('./data/train/_annotations.csv')
-    for e in entries:
-      filepath = os.path.join('./data/train', e[0])
-      image = load_single_image(filepath, e[2])
+def normalize_data(loader):
+  means = []
+  stds = []
+  for data, label, filename in loader:
+      means.append(torch.mean(data))
+      stds.append(torch.std(data))
+  
+  mean = torch.mean(torch.tensor(means))
+  std = torch.mean(torch.tensor(stds))
+  return mean, std
 
 if __name__ == "__main__":
     train_loader, test_loader = load_single_data(16)
-    normalize_epsilon(test_loader)
+    mean, std = normalize_data(train_loader)
+    print(mean, std)
+    max_epsilon = normalize_epsilon(test_loader)
+    print(epsilon)
