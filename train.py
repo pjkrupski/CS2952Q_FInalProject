@@ -34,10 +34,9 @@ def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, ac
     #7582 images in train folder 
        
     num_images = len(train_loader) * args['batch_size'] 
-    num_images_toperturb = num_images * (args['pjgd_training']/100)
+    num_images_toperturb = num_images * (args['percent_perturbed']/100)
     batches_perturbed_perEpoch = int(num_images_toperturb / args['batch_size'])
     total_batches_perturbed = 0
-
     for e in range(args['epochs']):
         print(f"Epoch {e}")
         train_loss = 0
@@ -46,12 +45,22 @@ def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, ac
         batches_to_perturb.update(random.sample(range(0, len(train_loader)), batches_perturbed_perEpoch)) #range is end exclusive   
         i = 0
         for data, target, filename in tqdm(train_loader):
-            #Data len is 16
-            #Data[0] shape is [1, 128, 128]
+            data, target = data.to(device), target.to(device)
+
             if i in batches_to_perturb:
                 total_batches_perturbed += 1
                 model.eval()
-                perturbed_data = projected_gradient_descent(model, data, args['pjgd_eps'], 0.01, 100, np.inf)
+                perturbed_data = None
+                if args['adv_training_type'] == 'pgd':
+                    perturbed_data = projected_gradient_descent(model, data, args['eps'], 0.01, 100, np.inf)
+                elif args['adv_training_type'] == 'fgsm':
+                    perturbed_data = fast_gradient_method(model, data, args['eps'], np.inf)
+                else: # 50/50 mixture
+                    if random.choice([0, 1]):
+                        perturbed_data = projected_gradient_descent(model, data, args['eps'], 0.01, 100, np.inf)
+                    else:
+                        perturbed_data = fast_gradient_method(model, data, args['eps'], np.inf)
+
                 model.train()
                 #torch.cat((perturbed_data, data), dim=0)
                 #Perform Robust Training
@@ -64,7 +73,7 @@ def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, ac
                 correct += torch.sum(acc_fn(out.cpu(), target.cpu())).item()
                 optimizer.step()
             
-            data, target = data.to(device), target.to(device)
+            
             optimizer.zero_grad()
 
             out = model(data)
@@ -87,10 +96,9 @@ def main(
     batch_size: Optional[int] = typer.Option(16, help='Input batch size for training (default: 64).'), 
     epochs: Optional[int] = typer.Option(10, help='Number of epochs to train (default: 15).'), 
     lr: Optional[float] = typer.Option(2e-4, help='Learning rate (default: 0.1).'), 
-    pjgd_training: Optional[int] = typer.Option(0, help='Percent of pjgd perturbed data eps included in training set'),
-    pjgd_eps: Optional[int] = typer.Option(.01, help='Pjgd eps'),
-    fgsm_training: Optional[int] = typer.Option(0, help='Percent of fgsm perturbed data included in training set'),
-    fgsm_eps: Optional[int] = typer.Option(0, help='Fgsm eps'),
+    adv_training_type: Optional[str] = typer.Option("pgd", help='Type of attack to perform adversarial learning with.'),
+    percent_perturbed: Optional[int] = typer.Option(0, help='Percent of dataset to modify for adversarial learning.'),
+    eps: Optional[float] = typer.Option(.01, help='max epsilon for adversarial learning.'),
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
     save_model: Optional[bool] = typer.Option(True, help='For saving the current model.'),
@@ -104,10 +112,9 @@ def main(
         'seed': seed,
         'log_interval': log_interval,
         'save_model': save_model,
-        'pjgd_training': pjgd_training,
-        'pjgd_eps': pjgd_eps,
-        'fgsm_training': fgsm_training,
-        'fgsm_eps': fgsm_eps
+        'adv_training_type': adv_training_type,
+        'percent_perturbed': percent_perturbed,
+        'eps': eps
     }
     torch.manual_seed(seed)
     augment = True if model_name.lower() == "cnn" else False
