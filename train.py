@@ -117,7 +117,7 @@ def main(
         'eps': eps
     }
     torch.manual_seed(seed)
-    augment = True if model_name.lower() == "cnn" else False
+    augment = True if model_name.lower() == "vit" else False
     train_loader, test_loader = load_single_data(batch_size, augment)
     
     model = None
