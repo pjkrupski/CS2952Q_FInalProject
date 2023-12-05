@@ -103,7 +103,9 @@ def main(
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
     save_model: Optional[bool] = typer.Option(True, help='For saving the current model.'),
     output_file: Optional[str] = typer.Option('model.pt', help='The name of output file.'),
-    model_name: Optional[str] = typer.Option('cnn', help='"cnn" for CNN model. "vit" for ViT model.')):
+    model_name: Optional[str] = typer.Option('cnn', help='"cnn" for CNN model. "vit" for ViT model.'),
+    temp: Optional[float] = typer.Option(1, help='The temperature for teacher/student models for defensive distillation.'),
+    is_teacher: Optional[bool] = typer.Option(False, help='Whether the model being trained is a teacher model or not.')):
 
     args = {
         'batch_size': batch_size,
@@ -122,7 +124,7 @@ def main(
     
     model = None
     if model_name.lower() == "cnn":
-        model = CNNModel_128().to(device)
+        model = CNNModel_128(is_teacher, temp).to(device)
     else:
         model = VitModel.to(device)
    

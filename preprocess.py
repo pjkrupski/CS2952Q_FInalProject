@@ -14,6 +14,7 @@ def normalize_epsilon(data_loader):
   for data, target, filename in tqdm(data_loader):
       # Find max pixel intensities for each image in batch.
       batch_maxes = torch.amax(data, dim=(1, 2, 3))
+      print(batch_maxes)
       maxes.append(batch_maxes)
   maxes = torch.concat(maxes)
   mean = torch.mean(maxes).item()
@@ -61,6 +62,7 @@ class UATD_Multi_Dataset(Dataset):
 def load_single_data(batch_size=16, augment = False):
     transform = None
     if augment:
+      print('augmenting')
       transform = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.RandomAffine(0, translate=(0.1, 0.1), scale=(1, 1.1)), transforms.ToTensor()])
     else:
       transform = transforms.Compose([transforms.ToTensor()])
@@ -176,7 +178,7 @@ def normalize_data(loader):
 
 if __name__ == "__main__":
     train_loader, test_loader = load_single_data(16)
-    mean, std = normalize_data(train_loader)
-    print(mean, std)
+    # mean, std = normalize_data(train_loader)
+    # print(mean, std)
     max_epsilon = normalize_epsilon(test_loader)
-    print(epsilon)
+    print(max_epsilon)
