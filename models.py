@@ -43,7 +43,6 @@ class CNNModel_128(nn.Module):
       else:
         return softmax_temp(output, 1)
 
-
 VitModel = ViT(
    image_size=128,
    patch_size = 16,

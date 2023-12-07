@@ -7,7 +7,7 @@ from torchmetrics.classification import MulticlassConfusionMatrix
 from models import CNNModel_128, VitModel
 from preprocess import load_single_data
 
-device = 'cuda' if torch.cuda.is_available() else "cpu"
+device = torch.device('cpu') #'cuda' if torch.cuda.is_available() else "cpu"
 
 def test(model, device, test_loader, loss_fn, acc_fn):
     conf_mat = MulticlassConfusionMatrix(num_classes=10)
@@ -33,8 +33,8 @@ def test(model, device, test_loader, loss_fn, acc_fn):
 
 def main(
     batch_size: Optional[int] = typer.Option(64, help='Input batch size for training (default: 64).'), 
-    model_file: Optional[str] = typer.Option('model.pt', help='Path to model file to load for testing.'),
-    model_name: Optional[str] = typer.Option('cnn', help="cnn or vit")):
+    model_name: Optional[str] = typer.Option('cnn', help="cnn or vit"),
+    model_file: Optional[str] = typer.Option('128b_120e.pt', help='Path to model file to load for testing.')):
 
     torch.manual_seed(1)
     _, test_loader = load_single_data(batch_size)
