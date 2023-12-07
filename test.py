@@ -3,14 +3,15 @@ import typer
 from typing import Optional
 import torch.nn as nn
 from torchmetrics.classification import MulticlassConfusionMatrix
+import matplotlib.pyplot as plt
 
 from models import CNNModel_128, VitModel
 from preprocess import load_single_data
 
-device = torch.device('cpu') #'cuda' if torch.cuda.is_available() else "cpu"
+device = 'cuda' if torch.cuda.is_available() else "cpu"
 
-def test(model, device, test_loader, loss_fn, acc_fn):
-    conf_mat = MulticlassConfusionMatrix(num_classes=10)
+def test(model, device, test_loader, loss_fn, acc_fn, plot_confusion = False):
+    conf_mat = MulticlassConfusionMatrix(num_classes=10).to(device)
     model.eval()
     test_loss = 0
     correct = 0
@@ -21,14 +22,18 @@ def test(model, device, test_loader, loss_fn, acc_fn):
             out = model(data)
             test_loss += torch.sum(loss_fn(out, target)).item()
             correct += torch.sum(acc_fn(out, target)).item()
-            conf_mat.update(out, target)
+            print(torch.argmax(out, dim=1))
+            conf_mat.update(torch.argmax(out, dim=1), torch.argmax(target, dim=1))
 
     test_loss /= len(test_loader.dataset)
     test_acc = correct / len(test_loader.dataset)
     print('\nTest set: Average loss: {:.4f}, accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
-    fig_, ax_ = conf_mat.plot()
+    if plot_confusion:
+        fig_, ax_ = conf_mat.plot()
+        plt.show()
+        plt.savefig('confusion_matrix.png')
     return test_loss, test_acc
 
 def main(
@@ -47,9 +52,9 @@ def main(
     model.load_state_dict(torch.load(model_file))
 
     loss_fn = nn.CrossEntropyLoss()
-    acc_fn = lambda out, target: nn.functional.one_hot(torch.argmax(out, dim=1), 10) * target
+    acc_fn = lambda out, target: nn.functional.one_hot(torch.argmax(out, dim=1), 10) * nn.functional.one_hot(torch.argmax(target, dim=1), 10)
 
-    test(model, device, test_loader, loss_fn, acc_fn)
+    test(model, device, test_loader, loss_fn, acc_fn, True)
 
 if __name__ == '__main__':
     typer.run(main)
