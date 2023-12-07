@@ -14,60 +14,45 @@ def normalize_epsilon(data_loader):
   for data, target, filename in tqdm(data_loader):
       # Find max pixel intensities for each image in batch.
       batch_maxes = torch.amax(data, dim=(1, 2, 3))
-      print(batch_maxes)
       maxes.append(batch_maxes)
   maxes = torch.concat(maxes)
   mean = torch.mean(maxes).item()
-  print(mean/2)
   return mean/2
 
-def load_multi_data(batch_size=16):
-  transform = transforms.Compose([transforms.ToTensor()])
-  train_data = UATD_Multi_Dataset('./data/train', './data/train/_classes.csv', transform)
-  test_data = UATD_Multi_Dataset('./data/test', './data/test/_classes.csv', transform)
-  train_loader = DataLoader(train_data, batch_size, shuffle=True)
-  test_loader = DataLoader(test_data, batch_size, shuffle=True)
-  return train_loader, test_loader
-
-def load_multi_labels(filepath):
-  image_names = []
-  labels = []
-  with open(filepath, newline='') as csvfile:
-    reader = csv.reader(csvfile, delimiter=',', quotechar='|')
-    headers = next(reader)
-    for row in reader:
-      image_names.append(row[0])
-      onehot = list(map(lambda x: float(x), row[1:]))
-      labels.append(torch.FloatTensor(onehot))
+def normalize_data(loader):
+  means = []
+  stds = []
+  for data, label, filename in loader:
+      means.append(torch.mean(data))
+      stds.append(torch.std(data))
   
-  return image_names, labels
+  mean = torch.mean(torch.tensor(means))
+  std = torch.mean(torch.tensor(stds))
+  return mean, std
 
-class UATD_Multi_Dataset(Dataset):
-  def __init__(self, image_dir, labels_file, transform=None):
-      self.image_dir = image_dir
-      self.image_names, self.labels = load_multi_labels(labels_file)
-      self.transform = transform
+def load_single_data(batch_size=16, augment = False, teacher = None):
+    soft_labels = None
+    if teacher is not None:
+      train_data = UATD_Single_Dataset('./data/train', './data/train/_annotations.csv', transforms.Compose([transforms.ToTensor()]))
+      train_loader = DataLoader(train_data, batch_size)
+      soft_labels = {}
+      device = 'cuda' if torch.cuda.is_available() else "cpu"
+      print("Generating soft labels")
+      for data, label, filename in tqdm(train_loader):
+        data = data.to(device)
+        soft_label = teacher(data)
+        for i in range(soft_label.size()[0]):
+          soft_labels[filename[i]] = soft_label.data[i]
+      del train_loader
+      del train_data
 
-  def __len__(self):
-      return len(self.labels)
-
-  def __getitem__(self, idx):
-      label = self.labels[idx]
-      image = Image.open(os.path.join(self.image_dir, self.image_names[idx]))
-      image = image.convert('L')
-      if self.transform:
-        image = self.transform(image)
-      return image, label
-
-def load_single_data(batch_size=16, augment = False):
     transform = None
     if augment:
-      print('augmenting')
       transform = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.RandomAffine(0, translate=(0.1, 0.1), scale=(1, 1.1)), transforms.ToTensor()])
     else:
       transform = transforms.Compose([transforms.ToTensor()])
 
-    train_data = UATD_Single_Dataset('./data/train', './data/train/_annotations.csv', transform)
+    train_data = UATD_Single_Dataset('./data/train', './data/train/_annotations.csv', transform, labels=soft_labels)
     test_data = UATD_Single_Dataset('./data/test', './data/test/_annotations.csv', transform, is_test=True)
     train_loader = DataLoader(train_data, batch_size, shuffle=True)
     test_loader = DataLoader(test_data, batch_size, shuffle=True)
@@ -149,32 +134,26 @@ def load_single_image(filepath, bbox):
     return image
 
 class UATD_Single_Dataset(Dataset):
-  def __init__(self, image_dir, labels_file, transform=None, is_test=False):
+  def __init__(self, image_dir, labels_file, transform=None, is_test=False, labels=None):
     self.image_dir = image_dir
     self.entries = load_single_labels(labels_file, is_test)
     self.transform = transform
+    self.labels = labels
 
   def __len__(self):
     return len(self.entries)
 
   def __getitem__(self, idx):
     filename = self.entries[idx][0]
-    label = self.entries[idx][1]
+    label = None
+    if self.labels is not None:
+       label = self.labels[filename]
+    else:
+      label = self.entries[idx][1]
     image = load_single_image(os.path.join(self.image_dir, filename), self.entries[idx][2])
     if self.transform:
       image = self.transform(image)
     return image, label, filename
-
-def normalize_data(loader):
-  means = []
-  stds = []
-  for data, label, filename in loader:
-      means.append(torch.mean(data))
-      stds.append(torch.std(data))
-  
-  mean = torch.mean(torch.tensor(means))
-  std = torch.mean(torch.tensor(stds))
-  return mean, std
 
 if __name__ == "__main__":
     train_loader, test_loader = load_single_data(16)

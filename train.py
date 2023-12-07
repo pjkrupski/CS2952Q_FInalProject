@@ -6,8 +6,8 @@ from typing import Optional
 import torch.nn as nn
 import numpy as np
 
-from models import CNNModel_128, CNNModel_640, VitModel
-from preprocess import load_single_data, load_multi_data
+from models import CNNModel_128, VitModel
+from preprocess import load_single_data
 from test import test
 
 
@@ -73,7 +73,6 @@ def train(args, model, device, train_loader, test_loader, optimizer, loss_fn, ac
                 correct += torch.sum(acc_fn(out.cpu(), target.cpu())).item()
                 optimizer.step()
             
-            
             optimizer.zero_grad()
 
             out = model(data)
@@ -105,7 +104,8 @@ def main(
     output_file: Optional[str] = typer.Option('model.pt', help='The name of output file.'),
     model_name: Optional[str] = typer.Option('cnn', help='"cnn" for CNN model. "vit" for ViT model.'),
     temp: Optional[float] = typer.Option(1, help='The temperature for teacher/student models for defensive distillation.'),
-    is_teacher: Optional[bool] = typer.Option(False, help='Whether the model being trained is a teacher model or not.')):
+    is_teacher: Optional[bool] = typer.Option(False, help='Whether the model being trained is a teacher model or not.'),
+    teacher_model: Optional[str] = typer.Option('', help='Name of a teacher model file to collect labels for, if applicable.')):
 
     args = {
         'batch_size': batch_size,
@@ -119,8 +119,22 @@ def main(
         'eps': eps
     }
     torch.manual_seed(seed)
+
     augment = True if model_name.lower() == "vit" else False
-    train_loader, test_loader = load_single_data(batch_size, augment)
+    if teacher_model == '':
+      train_loader, test_loader = load_single_data(batch_size, augment)
+    else:
+      if model_name.lower() == "cnn":
+          teacher = CNNModel_128(is_teacher, temp).to(device)
+          # teacher = CNNModel_128(is_teacher, temp)
+          teacher.load_state_dict(torch.load(teacher_model))
+      else:
+          # TODO
+          teacher = VitModel.to(device)
+      teacher.eval()
+      train_loader, test_loader = load_single_data(batch_size, augment, teacher)
+      teacher.cpu()
+      del teacher
     
     model = None
     if model_name.lower() == "cnn":
@@ -129,7 +143,7 @@ def main(
         model = VitModel.to(device)
    
     loss_fn = nn.CrossEntropyLoss()
-    acc_fn = lambda out, target: nn.functional.one_hot(torch.argmax(out, dim=1), 10) * target
+    acc_fn = lambda out, target: nn.functional.one_hot(torch.argmax(out, dim=1), 10) * nn.functional.one_hot(torch.argmax(target, dim=1), 10)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
