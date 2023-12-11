@@ -44,14 +44,28 @@ class CNNModel_128(nn.Module):
         return softmax_temp(output, 1)
 
 VitModel = ViT(
-   image_size=128,
-   patch_size = 16,
-   num_classes = 10,
-   dim=256,
-   depth=6,
-   heads=12,
-   mlp_dim=512,
-   dropout=0.1,
-   emb_dropout=0.1,
-   channels=1
+  image_size=128,
+  patch_size = 16,
+  num_classes = 10,
+  dim=256,
+  depth=6,
+  heads=12,
+  mlp_dim=512,
+  dropout=0.1,
+  emb_dropout=0.1,
+  channels=1
 )
+
+class VitModel_dd(nn.Module):
+  def __init__(self, is_teacher = False, temp=1):
+    super().__init__()
+    self.is_teacher = is_teacher
+    self.temp = temp
+    self.model = VitModel
+  
+  def forward(self, input):
+    output = self.model(input)
+    if self.is_teacher or self.training:
+      return softmax_temp(output, self.temp)
+    else:
+      return softmax_temp(output, 1)

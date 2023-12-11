@@ -64,24 +64,42 @@ def attack_test_fgsm(model, attack_model, device, test_loader, eps):
   
 def gen_examples(model, device, test_loader, eps):
   for data, target, filenames in test_loader:
-    data, target = data.to(device), target.to(device)
+    # data, target = data.to(device), target.to(device)
+    model.cpu()
     # data_perturbed = fast_gradient_method(model, data, eps, np.inf)
-    data_perturbed = projected_gradient_descent(model, data, eps, 0.01, 100, np.inf)
-    print(data.shape, data_perturbed.shape)
-    plt.imshow(data_perturbed[0].permute(1, 2, 0).cpu().detach().numpy())
-    plt.show()
+    data_perturbed_001 = projected_gradient_descent(model, data, 0.001, 0.001, 100, np.inf, sanity_checks=False)
+    data_perturbed_005 = projected_gradient_descent(model, data, 0.005, 0.001, 100, np.inf, sanity_checks=False)
+    data_perturbed_01 = projected_gradient_descent(model, data, 0.01, 0.001, 100, np.inf, sanity_checks=False)
+    data_perturbed_015 = projected_gradient_descent(model, data, 0.015, 0.001, 100, np.inf, sanity_checks=False)
+    data_perturbed_02 = projected_gradient_descent(model, data, 0.02, 0.001, 100, np.inf, sanity_checks=False)
+    data_perturbed_05 = projected_gradient_descent(model, data, 0.05, 0.001, 100, np.inf, sanity_checks=False)
+    data_perturbed_1 = projected_gradient_descent(model, data, 0.1, 0.001, 100, np.inf, sanity_checks=False)
+
     plt.imshow(data[0].permute(1, 2, 0).cpu().detach().numpy())
     plt.show()
-    # plt.savefig(filenames[0])
-    # to_pil = transforms.ToPILImage()
-    # image = to_pil(data_perturbed[0])
-    # print(image)
-    # image.show()
-    # image.save(f"{filenames[0]}.jpg")
+    plt.imshow(data_perturbed_001[0].permute(1, 2, 0).cpu().detach().numpy())
+    plt.show()
+    plt.imshow(data_perturbed_005[0].permute(1, 2, 0).cpu().detach().numpy())
+    plt.show()
+    plt.imshow(data_perturbed_01[0].permute(1, 2, 0).cpu().detach().numpy())
+    plt.show()
+    plt.imshow(data_perturbed_015[0].permute(1, 2, 0).cpu().detach().numpy())
+    plt.show()
+    plt.imshow(data_perturbed_02[0].permute(1, 2, 0).cpu().detach().numpy())
+    plt.show()
+    plt.imshow(data_perturbed_05[0].permute(1, 2, 0).cpu().detach().numpy())
+    plt.show()
+    plt.imshow(data_perturbed_1[0].permute(1, 2, 0).cpu().detach().numpy())
+    plt.show()
+
+    # plt.imshow(data_perturbed[0].permute(1, 2, 0).cpu().detach().numpy())
+    # plt.show()
+    # plt.imshow(data[0].permute(1, 2, 0).cpu().detach().numpy())
+    # plt.show()
 
 def main():
-  pretrained_model = "vit_none.pt"
-  perturbation_calc_model = "128b_120e.pt"
+  pretrained_model = "./models/vit_none.pt"
+  perturbation_calc_model = "./models/cnn_none.pt"
 
   # Set random seed for reproducibility
   torch.manual_seed(42)
@@ -91,17 +109,17 @@ def main():
   attack_model = CNNModel_128().to(device)
   #model = CNNModel_128().to(device)
   model.load_state_dict(torch.load(pretrained_model, map_location=device))
-  attack_model.load_state_dict(torch.load(perturbation_calc_model, map_location=device))
-  attack_model.eval()
+  # attack_model.load_state_dict(torch.load(perturbation_calc_model, map_location=device))
+  # attack_model.eval()
   model.eval()
 
   _, test_loader = load_single_data(4, True) #True if ViT
 
-  # gen_examples(model, device, test_loader, 0.001)
-  accs = iterative_attack(model, attack_model, device, test_loader)
-  file = open('./attack_results.txt', 'w')
-  file.write(str(accs))
-  file.close()
+  gen_examples(model, device, test_loader, 0.005)
+  # accs = iterative_attack(model, attack_model, device, test_loader)
+  # file = open('./attack_results.txt', 'w')
+  # file.write(str(accs))
+  # file.close()
 
 if __name__ == '__main__':
   main()

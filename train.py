@@ -6,7 +6,7 @@ from typing import Optional
 import torch.nn as nn
 import numpy as np
 
-from models import CNNModel_128, VitModel
+from models import CNNModel_128, VitModel, VitModel_dd
 from preprocess import load_single_data
 from test import test
 
@@ -105,7 +105,8 @@ def main(
     model_name: Optional[str] = typer.Option('cnn', help='"cnn" for CNN model. "vit" for ViT model.'),
     temp: Optional[float] = typer.Option(1, help='The temperature for teacher/student models for defensive distillation.'),
     is_teacher: Optional[bool] = typer.Option(False, help='Whether the model being trained is a teacher model or not.'),
-    teacher_model: Optional[str] = typer.Option('', help='Name of a teacher model file to collect labels for, if applicable.')):
+    teacher_model: Optional[str] = typer.Option('', help='Name of a teacher model file to collect labels for, if applicable.'),
+    loss: Optional[str] = typer.Option('ce', help="ce or kl")):
 
     args = {
         'batch_size': batch_size,
@@ -124,13 +125,8 @@ def main(
     if teacher_model == '':
       train_loader, test_loader = load_single_data(batch_size, augment)
     else:
-      if model_name.lower() == "cnn":
-          teacher = CNNModel_128(is_teacher, temp).to(device)
-          # teacher = CNNModel_128(is_teacher, temp)
-          teacher.load_state_dict(torch.load(teacher_model))
-      else:
-          # TODO
-          teacher = VitModel.to(device)
+      teacher = CNNModel_128(True, temp).to(device)
+      teacher.load_state_dict(torch.load(teacher_model))
       teacher.eval()
       train_loader, test_loader = load_single_data(batch_size, augment, teacher)
       teacher.cpu()
@@ -140,9 +136,14 @@ def main(
     if model_name.lower() == "cnn":
         model = CNNModel_128(is_teacher, temp).to(device)
     else:
-        model = VitModel.to(device)
+        model = VitModel_dd(is_teacher, temp).to(device)
    
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = None
+    if loss == 'ce':
+      print('ce')
+      loss_fn = nn.CrossEntropyLoss()
+    else:
+      loss_fn = nn.KLDivLoss(reduction="batchmean")
     acc_fn = lambda out, target: nn.functional.one_hot(torch.argmax(out, dim=1), 10) * nn.functional.one_hot(torch.argmax(target, dim=1), 10)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)

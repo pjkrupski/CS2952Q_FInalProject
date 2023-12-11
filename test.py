@@ -22,7 +22,6 @@ def test(model, device, test_loader, loss_fn, acc_fn, plot_confusion = False):
             out = model(data)
             test_loss += torch.sum(loss_fn(out, target)).item()
             correct += torch.sum(acc_fn(out, target)).item()
-            print(torch.argmax(out, dim=1))
             conf_mat.update(torch.argmax(out, dim=1), torch.argmax(target, dim=1))
 
     test_loss /= len(test_loader.dataset)
@@ -33,7 +32,6 @@ def test(model, device, test_loader, loss_fn, acc_fn, plot_confusion = False):
     if plot_confusion:
         fig_, ax_ = conf_mat.plot()
         plt.show()
-        plt.savefig('confusion_matrix.png')
     return test_loss, test_acc
 
 def main(

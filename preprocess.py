@@ -39,10 +39,13 @@ def load_single_data(batch_size=16, augment = False, teacher = None):
       device = 'cuda' if torch.cuda.is_available() else "cpu"
       print("Generating soft labels")
       for data, label, filename in tqdm(train_loader):
-        data = data.to(device)
+        data, label = data.to(device), label.to(device)
         soft_label = teacher(data)
         for i in range(soft_label.size()[0]):
-          soft_labels[filename[i]] = soft_label.data[i]
+          if (torch.argmax(soft_label.data[i]).item() is not torch.argmax(label.data[i]).item()):
+            soft_labels[filename[i]] = label.data[i]
+          else:
+            soft_labels[filename[i]] = soft_label.data[i]
       del train_loader
       del train_data
 
