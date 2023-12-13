@@ -22,11 +22,15 @@ class trainer:
         accuracy = 0
         self.net.train()
         for epoch in range(self.n_epochs):
+            #TODO: Remove when finished debugging
+            #Save accuracy and pass as constant in universal_perturbations.py
+            break
             running_loss = 0.0
             print_every = 200  # mini-batches
             #Added filename to fit trainloader shape
             for i, (inputs, labels, filename) in enumerate(trainloader, 0):
                 # Transfer to GPU
+                print("training...", i, "/", len(trainloader))
                 inputs, labels = inputs.to(device), labels.to(device)
                 # zero the parameter gradients
                 self.optimizer.zero_grad()
@@ -49,7 +53,7 @@ class trainer:
             print('Accuracy of the network on the 10000 test images: %d %%' % (100 * accuracy))
 
         print('Finished Training')
-        return accuracy
+        return 0 #accuracy
 
 
 
@@ -58,10 +62,17 @@ def compute_accuracy(net, testloader):
     correct = 0
     total = 0
     with torch.no_grad():
-        for images, labels in testloader:
+        i = 0
+        for images, labels, filenames in testloader:
+            print("testing ", i, "/", len(testloader))
             images, labels = images.to(device), labels.to(device)
             outputs = net(images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
+            i += 1
+    print("test complete")
     return correct / total
+
+
+

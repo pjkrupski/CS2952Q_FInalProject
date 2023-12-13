@@ -50,7 +50,7 @@ def generate(accuracy ,trainset, testset, net, delta=0.2, max_iter_uni=np.inf, x
     index_order = np.arange(num_img_trn)
 
     # Initializing the perturbation to 0s
-    v=np.zeros([28,28])
+    v=np.zeros([128,128])
 
     #Initializing fooling rate and iteration count
     fooling_rate = 0.0
@@ -63,8 +63,8 @@ def generate(accuracy ,trainset, testset, net, delta=0.2, max_iter_uni=np.inf, x
     ])
 
     transformer2 = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(28),
+        transforms.Resize(128),
+        transforms.CenterCrop(128),
     ])
     fooling_rates=[0]
     accuracies = []
@@ -81,15 +81,15 @@ def generate(accuracy ,trainset, testset, net, delta=0.2, max_iter_uni=np.inf, x
             # Generating the original image from data
             cur_img = Image.fromarray(img_trn[index][0])
             cur_img1 = transformer1(transformer2(cur_img))[np.newaxis, :].to(device)
-
+            print("ln 84")
             # Feeding the original image to the network and storing the label returned
             r2 = (net(cur_img1).max(1)[1])
             torch.cuda.empty_cache()
-
+            print("ln 88")
             # Generating a perturbed image from the current perturbation v and the original image
             per_img = Image.fromarray(transformer2(cur_img)+v.astype(np.uint8))
             per_img1 = transformer1(transformer2(per_img))[np.newaxis, :].to(device)
-
+            print("ln 92")
             # Feeding the perturbed image to the network and storing the label returned
             r1 = (net(per_img1).max(1)[1])
             torch.cuda.empty_cache()
