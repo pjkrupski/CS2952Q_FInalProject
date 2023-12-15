@@ -1,6 +1,7 @@
 import numpy as np
 import deepfool
 from PIL import Image
+from torch.cuda import device_count
 import trainer
 import torch
 from torchvision import transforms
@@ -29,24 +30,32 @@ def generate(accuracy ,trainset, testset, net, delta=0.2, max_iter_uni=np.inf, x
     '''
 
     net.eval()
-    device = 'cpu'
-
+    #device = 'cpu' #original
+    device = 'cuda' if torch.cuda.is_available() else "cpu"
     # Importing images and creating an array with them
     img_trn = []
+    i = 0
     for image in trainset:
         for image2 in image[0]:
             img_trn.append(image2.numpy())
+        print(i, "/", len(trainset))
+        i += 1
+        if i == 2:
+          break
 
 
     img_tst = []
+    i = 0
     for image in testset:
         for image2 in image[0]:
             img_tst.append(image2.numpy())
-
+        i += 1
+        if i == 2:
+          break
 
     # Setting the number of images to 300  (A much lower number than the total number of instances on the training set)
     # To verify the generalization power of the approach
-    num_img_trn = 100
+    num_img_trn = 1  #100
     index_order = np.arange(num_img_trn)
 
     # Initializing the perturbation to 0s
@@ -81,26 +90,23 @@ def generate(accuracy ,trainset, testset, net, delta=0.2, max_iter_uni=np.inf, x
             # Generating the original image from data
             cur_img = Image.fromarray(img_trn[index][0])
             cur_img1 = transformer1(transformer2(cur_img))[np.newaxis, :].to(device)
-            print("ln 84")
             # Feeding the original image to the network and storing the label returned
             r2 = (net(cur_img1).max(1)[1])
-            torch.cuda.empty_cache()
-            print("ln 88")
+            #torch.cuda.empty_cache()
             # Generating a perturbed image from the current perturbation v and the original image
             per_img = Image.fromarray(transformer2(cur_img)+v.astype(np.uint8))
             per_img1 = transformer1(transformer2(per_img))[np.newaxis, :].to(device)
-            print("ln 92")
             # Feeding the perturbed image to the network and storing the label returned
             r1 = (net(per_img1).max(1)[1])
-            torch.cuda.empty_cache()
+            #torch.cuda.empty_cache()
 
             # If the label of both images is the same, the perturbation v needs to be updated
             if r1 == r2:
                 print(">> k =", np.where(index==index_order)[0][0], ', pass #', iter, end='      ')
-
+                print("ln 110")
                 # Finding a new minimal perturbation with deepfool to fool the network on this image
                 dr, iter_k, label, k_i, pert_image = deepfool.deepfool(per_img1[0], net, num_classes=num_classes, overshoot=overshoot, max_iter=max_iter_df)
-
+                print("ln 113")
                 # Adding the new perturbation found and projecting the perturbation v and data point xi on p.
                 if iter_k < max_iter_df-1:
 
@@ -112,7 +118,7 @@ def generate(accuracy ,trainset, testset, net, delta=0.2, max_iter_uni=np.inf, x
 
         # Reshaping v to the desired shape
         v = v.reshape((v.shape[0], -1, 1))
-
+        print("ln 115")
         with torch.no_grad():
 
             # Compute fooling_rate
@@ -121,21 +127,29 @@ def generate(accuracy ,trainset, testset, net, delta=0.2, max_iter_uni=np.inf, x
 
             i = 0
             # Finding labels for original images
-            for batch_index, (inputs, _) in enumerate(testset):
+            for batch_index, (inputs, labels, filename) in enumerate(testset):
                 i += inputs.shape[0]
                 inputs = inputs.to(device)
                 outputs = net(inputs)
                 _, predicted = outputs.max(1)
-                labels_original_images = torch.cat((labels_original_images, predicted.cpu()))
+                #predicted = predicted.cpu()
+                labels_original_images = labels_original_images.to(device)
+                #predicted.to(device)
+                labels_original_images = torch.cat((labels_original_images, predicted)) #Removed.cpu
             torch.cuda.empty_cache()
             correct = 0
             # Finding labels for perturbed images
-            for batch_index, (inputs, labels) in enumerate(testset):
-                inputs = inputs.to(device)
+            for batch_index, (inputs, labels, filename) in enumerate(testset):
+                #inputs = inputs.to(device) #Commenting out causes input type error
+                #v = v.to(device)
                 inputs += transformer(v).float()
+                inputs = inputs.to(device)
                 outputs = net(inputs)
                 _, predicted = outputs.max(1)
-                labels_pertubed_images = torch.cat((labels_pertubed_images, predicted.cpu()))
+                #predicted = predicted.cpu()
+                labels_pertubed_images = labels_pertubed_images.to(device)
+                labels_pertubed_images = torch.cat((labels_pertubed_images, predicted))
+                predicted = predicted.cpu()
                 correct += (predicted == labels).sum().item()
             torch.cuda.empty_cache()
 
